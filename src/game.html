@@ -182,18 +182,24 @@ const BASE={
  C1:{d:3,name:'평평한 점',f:x=>x**3,flat:[0],view:{x:[-1.75,1.75],y:[-3.3,3.3]}},
  C0:{d:3,name:'극값 없음',f:x=>0.18*x**3+1.15*x,flat:[],view:{x:[-2.4,2.4],y:[-3.3,3.3]}},
  W:{d:4,name:'W자',f:wFn(-0.45),flat:[]},
+ /* W2: 왼쪽 극소가 더 낮은 W자. (x−α)²(x²+px+q), (x−α)(x−β)(x²+px+q) 두 문제에서만 W자를 좌우 두 장으로 나눠 보여 줘요 */
+ W2:{d:4,name:'W자',f:wFn(0.45),flat:[]},
  FL:{d:4,name:'평평→극소',f:x=>0.8*(x**4/4+x**3/3-x*x/2-x),flat:[-1]},
  FR:{d:4,name:'극소→평평',f:x=>0.8*(x**4/4-x**3/3-x*x/2+x),flat:[1]},
- U:{d:4,name:'U자',f:x=>0.22*x**4+0.5*x*x,flat:[]}
+ /* U자는 모든 문제에서 같은 그림: 바닥이 너무 납작하지도 않고 어깨도 없는 둥근 U자 */
+ U:{d:4,name:'U자',f:x=>0.12*x**4+0.6*x*x,flat:[]}
 };
 const ORDER={2:['P'],3:['C2','C1','C0'],4:['W','FL','FR','U']};
+/* W자를 좌우 두 장으로 나눌 문제 (지금은 쓰지 않아요. 예: ['2i1','11i1']) */
+const SPLIT_W=[];
+function orderFor(t){return t.d===4&&SPLIT_W.includes(key(t))?['W','W2','FL','FR','U']:ORDER[t.d]}
 const DOM=[-2.6,2.6];
 const key=t=>t.m.join('')+'i'+(t.irr||0);
 /* t < 0 이면 왼쪽 극솟값이 더 높고, t > 0 이면 오른쪽 극솟값이 더 높아요 */
 function wTune(t){const k=key(t);if(k==='211i0')return -0.75;if(k==='112i0')return 0.75;if(k==='22i0')return 0;return -0.45}
 /* 이 문제에서 쓰는 개형 하나 만들기 (W는 문제에 맞춰 두 극솟값 높이를 조절) */
 function makeShape(id,sign,t){
-  const b=BASE[id];let f=b.f;if(id==='W')f=wFn(wTune(t));
+  const b=BASE[id];let f=b.f;if(id==='W')f=wFn(SPLIT_W.includes(key(t))?-0.6:wTune(t));if(id==='W2')f=wFn(0.6);
   const g=sign>0?f:(x=>-f(x));
   const sp=[];const h=1e-4;
   for(let x=DOM[0];x<DOM[1];x+=0.001){const a=g(x+h)-g(x-h),c=g(x+0.001+h)-g(x+0.001-h);if(a*c<0)sp.push({x:x+0.0005,kind:'ext'})}
@@ -226,13 +232,13 @@ function signature(S,y){
 const targetSig=t=>t.m.map(k=>k===4?2:k);
 function possibleShapes(t){
   if(t.d===2)return ['P'];
-  if(t.irr)return ORDER[t.d].slice();
+  if(t.irr)return orderFor(t).slice();
   const k=t.m.join('');
   if(t.d===3)return k==='3'?['C1']:['C2'];
   return k==='31'?['FL']:k==='13'?['FR']:k==='4'?['U']:['W'];
 }
 /* 이 판의 보기 목록과 정답 목록 */
-function optionList(t,mode){const signs=mode==='mixed'?[1,-1]:[1];const o=[];signs.forEach(s=>ORDER[t.d].forEach(id=>o.push({id,sign:s})));return o}
+function optionList(t,mode){const signs=mode==='mixed'?[1,-1]:[1];const o=[];signs.forEach(s=>orderFor(t).forEach(id=>o.push({id,sign:s})));return o}
 function correctList(t,mode){const signs=mode==='mixed'?[1,-1]:[1];const o=[];signs.forEach(s=>possibleShapes(t).forEach(id=>o.push({id,sign:s})));return o}
 const sameSig=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i].c);
 function judge(t,S,y){return possibleShapes(t).includes(S.id)&&sameSig(targetSig(t),signature(S,y))}
@@ -254,7 +260,7 @@ const NS='http://www.w3.org/2000/svg';
 const $=id=>document.getElementById(id);
 const GREEK=['α','β','γ','δ'];
 const SUP={1:'',2:'²',3:'³',4:'⁴'};
-const LAB='①②③④⑤⑥⑦⑧';
+const LAB='①②③④⑤⑥⑦⑧⑨⑩';
 let MODE='positive', SERVER=false;
 
 function formulaHTML(t){
@@ -269,7 +275,8 @@ function condHTML(t){if(t.m.length<2)return '';return t.m.map((_,i)=>`<i>${GREEK
 function el(tag,attrs={},parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e}
 function pathOf(S,X,Y){const A=S.vx[0]-0.3,B=S.vx[1]+0.3;let d='';for(let i=0;i<=260;i++){const x=A+(B-A)*i/260;let y=Y(S.g(x));y=Math.max(-40,Math.min(400,y));d+=(i?'L':'M')+X(x).toFixed(1)+' '+y.toFixed(1)}return d}
 function cardSVG(S){const W=170,H=104,pad=0.06*(S.hi-S.lo);
-  const lo=S.view?S.wLo:S.lo-pad,hi=S.view?S.wHi:S.hi+pad,[a,b]=S.vx;
+  /* 삼차·사차 카드는 아래 x축 평면과 같은 높이 범위로 그려요 */
+  const lo=S.d>2?S.wLo:S.lo-pad,hi=S.d>2?S.wHi:S.hi+pad,[a,b]=S.vx;
   const X=x=>6+(x-a)/(b-a)*(W-12),Y=y=>H-6-(y-lo)/(hi-lo)*(H-12);
   const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,'aria-hidden':'true'});const id='cc'+Math.random().toString(36).slice(2,8);
   el('rect',{width:W,height:H},el('clipPath',{id},el('defs',{},svg)));
@@ -287,7 +294,7 @@ function renderQ(){
   Q={t,opts:optionList(t,MODE).map(o=>({...o,S:makeShape(o.id,o.sign,t)})),sel:new Set(),axis:{},moved:{},planes:{},submitted:false,done:false};
   $('qn').innerHTML=`${G.i+1} <small>/ ${G.items.length}</small>`;renderDots();
   $('fx').innerHTML=formulaHTML(t);const c=condHTML(t);$('cond').innerHTML=c;$('cond').hidden=!c;
-  const cards=$('cards');cards.innerHTML='';cards.style.setProperty('--cols',{1:2,2:2,3:3,4:4,6:3,8:4}[Q.opts.length]||4);
+  const cards=$('cards');cards.innerHTML='';cards.style.setProperty('--cols',{1:2,2:2,3:3,4:4,5:5,6:3,8:4,10:5}[Q.opts.length]||4);
   Q.opts.forEach((o,j)=>{const b=document.createElement('button');b.type='button';b.className='card';b.id=`card-${j}`;b.setAttribute('aria-pressed','false');
     b.setAttribute('aria-label',`개형 ${j+1}`);b.innerHTML=`<span class="lab">${LAB[j]}</span><span class="ck"></span>`;b.appendChild(cardSVG(o.S));
     b.addEventListener('click',()=>toggle(j));cards.appendChild(b)});
@@ -402,7 +409,10 @@ function submit(){
 }
 function explainHTML(t){const li=[];
   t.m.forEach((k,i)=>{const f=`(<i>x</i> − <i>${GREEK[i]}</i>)${SUP[k]}`;
-    li.push(k===1?`${f} → <span class="m">x = ${GREEK[i]}</span>에서 x축을 뚫고 지나가요.`:k===2?`${f} → 중근이라 <span class="m">x = ${GREEK[i]}</span>에서 x축에 접해요.`:k===3?`${f} → 삼중근이라 <span class="m">x = ${GREEK[i]}</span>에서 평평해지면서 x축을 지나가요.`:`${f} → 사중근이라 <span class="m">x = ${GREEK[i]}</span>에서 x축에 접해요.`)});
+    li.push(k===1?`${f} → <span class="m">x = ${GREEK[i]}</span>에서 x축을 뚫고 지나가요.`:k===2?`${f} → <span class="m">f(x)</span>의 중근이라 <span class="m">x = ${GREEK[i]}</span>에서 x축에 접해요.`:k===3?`${f} → <span class="m">f(x)</span>의 삼중근이라 <span class="m">x = ${GREEK[i]}</span>에서 x축을 지나가면서 평평해져요(그 점에서 기울기가 0).`:`${f} → <span class="m">f(x)</span>의 사중근이라 <span class="m">x = ${GREEK[i]}</span>에서 x축에 접해요.`)});
+  const kk=key(t);
+  if(SPLIT_W.includes(kk))li.push(`W자는 어느 극소가 더 낮은지에 따라 두 가지로 나눠 봐요. 왼쪽 극소가 더 낮은 W자와 오른쪽 극소가 더 낮은 W자 모두 가능해요.`);
+  if(kk==='4i0'||kk==='2i1')li.push(`(<i>x</i> − <i>α</i>)⁴과 (<i>x</i> − <i>α</i>)²(<i>x</i>² + <i>px</i> + <i>q</i>)는 식은 다르지만, 증감표가 같아서(감소 → 극소 → 증가) 같은 U자 개형이에요.`);
   if(t.irr)li.push(`허근을 갖는 이차식 인수는 항상 양수라 x축과 만나지 않아요. 극값이 몇 개인지는 식만으로 정할 수 없어서, 이 차수의 개형이 모두 가능해요.`);
   if(correctList(t,MODE).some(c=>zonesOf(t,makeShape(c.id,c.sign,t)).length>1))li.push(`개형에 따라 x축을 놓을 수 있는 위치가 두 종류예요. 극값이나 평평한 점을 사이에 두고 위쪽과 아래쪽이 각각 조건을 만족하기 때문이에요.`);
   if(MODE==='mixed')li.push(`<span class="m">a</span>의 부호를 모르므로 위아래가 뒤집힌 개형도 가능해요.`);
