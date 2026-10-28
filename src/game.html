@@ -1,0 +1,452 @@
+<title>개형 배치 연습</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=STIX+Two+Text:ital@0;1&display=swap">
+<style>
+/* layout: 모눈 학습지 한 장. 위: 식 카드, 가운데: 개형 카드 고르기, 아래: 고른 개형마다 x축 끌기 평면 */
+:root{
+  --paper:#F5F7F6; --card:#FFFFFF; --ink:#1B2620; --muted:#58665E; --line:#D5DDD8; --grid:#E6ECE8;
+  --accent:#1F7A5A; --accent-soft:#DCF0E7; --axis:#2F6FB3; --axis-soft:#E2EDF8;
+  --ok:#1E7F55; --ok-soft:#DDF2E7; --bad:#B9382F; --bad-soft:#FBE4E1;
+  --f-display:"Gowun Batang","Noto Serif KR",serif;
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-math:"STIX Two Text","Times New Roman",serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#101513; --card:#171E1B; --ink:#E5EEE9; --muted:#9AABA2; --line:#2A3530; --grid:#18201C;
+  --accent:#5CC79C; --accent-soft:#163327; --axis:#7DB2EC; --axis-soft:#1B2A3D;
+  --ok:#58C793; --ok-soft:#14301F; --bad:#F2877F; --bad-soft:#3A1C1A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#101513; --card:#171E1B; --ink:#E5EEE9; --muted:#9AABA2; --line:#2A3530; --grid:#18201C;
+  --accent:#5CC79C; --accent-soft:#163327; --axis:#7DB2EC; --axis-soft:#1B2A3D;
+  --ok:#58C793; --ok-soft:#14301F; --bad:#F2877F; --bad-soft:#3A1C1A; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.6;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.app{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(1.8rem,5vw,2.5rem);line-height:1.15;margin:0;text-wrap:balance}
+h2{font-family:var(--f-display);font-weight:700;font-size:1.2rem;margin:0}
+.m{font-family:var(--f-math);font-style:italic}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px clamp(16px,3vw,26px)}
+.kicker{font-size:.8rem;letter-spacing:.06em;color:var(--accent);font-weight:600}
+.rules{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;color:var(--muted)}
+.rules b{color:var(--ink);font-weight:600}
+label{font-weight:500;font-size:.92rem}
+input[type=text]{font:inherit;padding:10px 14px;border-radius:10px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);width:100%}
+input[type=text]:focus{outline:none;border-color:var(--accent)}
+.err{color:var(--bad);font-size:.85rem;min-height:1.2em;margin:0}
+button.btn{font:inherit;font-weight:600;border-radius:999px;padding:10px 22px;cursor:pointer;border:1.5px solid var(--accent);background:var(--accent);color:var(--card)}
+button.btn.ghost{background:transparent;color:var(--accent)}
+button.btn:disabled{opacity:.55;cursor:default}
+button:focus-visible,svg:focus-visible{outline:3px solid var(--axis);outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:999px;overflow:hidden}
+.seg button{font:inherit;font-size:.85rem;border:0;background:transparent;color:var(--muted);padding:6px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+/* play */
+.hud{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;font-variant-numeric:tabular-nums}
+.hud .qn{font-family:var(--f-display);font-weight:700;font-size:1.3rem}
+.hud .qn small{font-family:var(--f-body);font-weight:400;color:var(--muted);font-size:.9rem}
+.hud .clock{color:var(--muted);font-size:.9rem}
+.dots{display:flex;gap:5px;flex-wrap:wrap}
+.dots i{width:9px;height:9px;border-radius:50%;background:var(--line);display:block}
+.dots i.ok{background:var(--ok)} .dots i.bad{background:var(--bad)} .dots i.now{outline:2px solid var(--accent);outline-offset:1px}
+.formula{text-align:center;display:flex;flex-direction:column;gap:2px;padding:6px 0 4px}
+.formula .fx{font-family:var(--f-math);font-size:clamp(1.5rem,5.5vw,2.2rem);line-height:1.35}
+.formula .fx i{font-style:italic}
+.formula .cond{font-family:var(--f-math);color:var(--muted);font-size:1.05rem}
+.formula .cond i{font-style:italic}
+.note{color:var(--muted);font-size:.85rem;margin:0}
+.step{font-size:.8rem;font-weight:600;color:var(--accent);background:var(--accent-soft);display:inline-block;padding:2px 10px;border-radius:999px}
+.cards{display:grid;grid-template-columns:repeat(var(--cols,4),minmax(0,1fr));gap:10px}
+.card{position:relative;border:1.5px solid var(--line);border-radius:12px;background:var(--card);padding:6px 8px;cursor:pointer;text-align:left;font:inherit;color:var(--ink);transition:border-color .12s,background .12s}
+.card:hover:not([disabled]){border-color:var(--accent)}
+.card.sel{border:2px solid var(--accent);background:var(--accent-soft)}
+.card .lab{font-family:var(--f-display);font-size:1.05rem;color:var(--muted)}
+.card .ck{position:absolute;right:8px;top:7px;width:19px;height:19px;border-radius:5px;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:var(--accent);background:var(--card)}
+.card.sel .ck{border-color:var(--accent)}
+.card svg{width:100%;height:auto;display:block}
+.card[disabled]{cursor:default}
+.planes{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.pl{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:6px 8px 8px;display:flex;flex-direction:column;gap:2px}
+.pl.ok{border:2px solid var(--ok)} .pl.bad{border:2px solid var(--bad)} .pl.reveal{border:2px dashed var(--ok)}
+.pl .lab{font-family:var(--f-display);font-size:1.05rem;color:var(--muted);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.pl .lab small{font-family:var(--f-body);font-size:.75rem}
+.pl svg{width:100%;height:auto;display:block;touch-action:none;user-select:none;-webkit-user-select:none;cursor:ns-resize;border-radius:8px}
+.pl.locked svg{cursor:default}
+.pl .why{font-size:.85rem;margin:2px 0 0;color:var(--bad)}
+.pl text{font-family:var(--f-math)}
+.empty{color:var(--muted);font-size:.9rem;border:1px dashed var(--line);border-radius:12px;padding:22px;text-align:center}
+.fb{border-radius:10px;padding:12px 16px;display:flex;flex-direction:column;gap:6px;font-size:.95rem}
+.fb.ok{background:var(--ok-soft)} .fb.bad{background:var(--bad-soft)}
+.fb h3{margin:0;font-size:1rem;font-weight:600}
+.fb.ok h3{color:var(--ok)} .fb.bad h3{color:var(--bad)}
+.fb ul{margin:0;padding-left:1.2em}
+.fb p{margin:0}
+.actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.big{font-family:var(--f-display);font-weight:700;font-size:clamp(3rem,10vw,4.5rem);line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tile{background:var(--paper);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column}
+.tile span{font-size:.78rem;color:var(--muted)} .tile b{font-size:1.3rem;font-weight:600;font-variant-numeric:tabular-nums}
+@media (max-width:640px){.cards{--cols:2!important}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+
+<section id="intro" class="panel" style="display:flex;flex-direction:column;gap:14px;max-width:620px;width:100%;margin:0 auto">
+  <span class="kicker">인수분해된 식과 그래프의 개형</span>
+  <h1>개형 배치 연습</h1>
+  <ul class="rules">
+    <li>실수 범위에서 인수분해를 모두 마친 식을 보고, 그래프가 될 수 있는 개형을 <b>모두</b> 골라요.</li>
+    <li>고른 개형마다 <b><span class="m">x</span>축을 끌어서</b> 알맞은 높이에 놓아요. <span class="m">y</span>축은 생략해요.</li>
+    <li>문제는 <b>19개</b>이고 이차 3 → 삼차 5 → 사차 11 순서로 나와요. 인수분해 형태와 중근·삼중근의 위치를 하나씩 모두 다뤄요. 시간제한은 없어요.</li>
+    <li>처음 제출한 답으로 맞힌 수를 세요. 틀리면 고쳐서 다시 낼 수 있어요.</li>
+  </ul>
+  <form id="startForm" style="display:flex;flex-direction:column;gap:6px" novalidate>
+    <label for="nick">이름</label>
+    <input type="text" id="nick" maxlength="12" placeholder="예: 3반 김수학" autocomplete="off">
+    <p class="err" id="nickErr"></p>
+    <div class="row" style="justify-content:space-between">
+      <button class="btn" type="submit" id="startBtn">시작하기</button>
+      <div class="row" id="previewMode" hidden>
+        <span class="note">미리보기 버전</span>
+        <div class="seg"><button type="button" id="pmPos" aria-pressed="true">양수만</button><button type="button" id="pmMix" aria-pressed="false">섞인 버전</button></div>
+      </div>
+    </div>
+  </form>
+</section>
+
+<section id="play" hidden style="display:flex;flex-direction:column;gap:14px">
+  <div class="panel" style="display:flex;flex-direction:column;gap:14px">
+    <div class="hud">
+      <div class="qn" id="qn">1 <small>/ 19</small></div>
+      <div class="dots" id="dots"></div>
+      <div class="clock" id="clock">0:00</div>
+    </div>
+    <div class="formula">
+      <div class="fx" id="fx"></div>
+      <div class="cond" id="cond"></div>
+      <p class="note">실수 범위에서 인수분해를 모두 마친 식이에요.</p>
+    </div>
+  </div>
+  <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+    <div><span class="step">1 · 될 수 있는 개형 모두 고르기</span></div>
+    <div class="cards" id="cards"></div>
+  </div>
+  <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+    <div class="row" style="justify-content:space-between"><span class="step">2 · 고른 개형마다 x축 놓기</span><span class="note">손잡이나 평면을 위아래로 끌어요. 극점·평평한 점 높이에서는 딱 붙어요.</span></div>
+    <div class="planes" id="planes"></div>
+    <p class="err" id="subErr"></p>
+    <div id="fb"></div>
+    <div class="actions">
+      <button class="btn ghost" type="button" id="revealBtn" hidden>정답 보기</button>
+      <button class="btn" type="button" id="submitBtn">제출</button>
+      <button class="btn" type="button" id="nextBtn" hidden>다음 문제</button>
+    </div>
+  </div>
+</section>
+
+<section id="result" hidden class="panel" style="display:flex;flex-direction:column;gap:16px;max-width:620px;width:100%;margin:0 auto">
+  <span class="kicker" id="resName"></span>
+  <div class="big" id="resScore">0 / 19</div>
+  <p class="note" style="margin-top:-8px">처음 제출에서 맞힌 문제 수</p>
+  <div class="tiles">
+    <div class="tile"><span>걸린 시간</span><b id="resTime">-</b></div>
+    <div class="tile"><span>다시 볼 문제</span><b id="resMiss">-</b></div>
+  </div>
+  <p class="note" id="saveMsg"></p>
+  <div class="row"><button class="btn" id="againBtn" type="button">새 문제로 다시</button><button class="btn ghost" id="homeBtn" type="button">처음 화면</button></div>
+</section>
+
+</div>
+
+<script>
+/* ===================== ENGINE (수학·판정) ===================== */
+/* 19문제를 TYPES 순서 그대로(이차 → 삼차 → 사차) 모두 출제해요 */
+const NQ=19;
+/* 문제 유형: m = 실근의 중복도(작은 근부터), irr = 허근을 갖는 이차 인수 개수 */
+const TYPES=[
+ {d:2,m:[1,1]},{d:2,m:[2]},{d:2,m:[],irr:1},
+ {d:3,m:[1,1,1]},{d:3,m:[2,1]},{d:3,m:[1,2]},{d:3,m:[3]},{d:3,m:[1],irr:1},
+ {d:4,m:[1,1,1,1]},{d:4,m:[2,1,1]},{d:4,m:[1,2,1]},{d:4,m:[1,1,2]},{d:4,m:[2,2]},
+ {d:4,m:[3,1]},{d:4,m:[1,3]},{d:4,m:[4]},{d:4,m:[1,1],irr:1},{d:4,m:[2],irr:1},{d:4,m:[],irr:2}
+];
+/* 개형 (최고차항 양수 기준). 음수 개형은 위아래를 뒤집어요. flat = 평평한 점(극값 아님) */
+function wFn(t){return x=>0.35*(x**4-5*x*x)+t*x}
+const BASE={
+ P:{d:2,name:'포물선',f:x=>0.55*x*x,flat:[]},
+ /* 삼차 개형은 가운데 굴곡이 잘 보이도록 보여 줄 범위(view)를 따로 정해요. 양 끝은 화면 밖으로 빠져나가요 */
+ C2:{d:3,name:'극값 2개',f:x=>x**3-3*x,flat:[],view:{x:[-2.25,2.25],y:[-3.3,3.3]}},
+ C1:{d:3,name:'평평한 점',f:x=>x**3,flat:[0],view:{x:[-1.75,1.75],y:[-3.3,3.3]}},
+ C0:{d:3,name:'극값 없음',f:x=>0.18*x**3+1.15*x,flat:[],view:{x:[-2.4,2.4],y:[-3.3,3.3]}},
+ W:{d:4,name:'W자',f:wFn(-0.45),flat:[]},
+ FL:{d:4,name:'평평→극소',f:x=>0.8*(x**4/4+x**3/3-x*x/2-x),flat:[-1]},
+ FR:{d:4,name:'극소→평평',f:x=>0.8*(x**4/4-x**3/3-x*x/2+x),flat:[1]},
+ U:{d:4,name:'U자',f:x=>0.22*x**4+0.5*x*x,flat:[]}
+};
+const ORDER={2:['P'],3:['C2','C1','C0'],4:['W','FL','FR','U']};
+const DOM=[-2.6,2.6];
+const key=t=>t.m.join('')+'i'+(t.irr||0);
+/* t < 0 이면 왼쪽 극솟값이 더 높고, t > 0 이면 오른쪽 극솟값이 더 높아요 */
+function wTune(t){const k=key(t);if(k==='211i0')return -0.75;if(k==='112i0')return 0.75;if(k==='22i0')return 0;return -0.45}
+/* 이 문제에서 쓰는 개형 하나 만들기 (W는 문제에 맞춰 두 극솟값 높이를 조절) */
+function makeShape(id,sign,t){
+  const b=BASE[id];let f=b.f;if(id==='W')f=wFn(wTune(t));
+  const g=sign>0?f:(x=>-f(x));
+  const sp=[];const h=1e-4;
+  for(let x=DOM[0];x<DOM[1];x+=0.001){const a=g(x+h)-g(x-h),c=g(x+0.001+h)-g(x+0.001-h);if(a*c<0)sp.push({x:x+0.0005,kind:'ext'})}
+  b.flat.forEach(x=>sp.push({x,kind:'flat'}));
+  sp.forEach(s=>s.y=g(s.x));
+  /* 높이가 같은 극점(예: (x−α)²(x−β)²의 두 극솟점)은 정확히 같은 값으로 맞춰서, x축이 두 점에 동시에 닿게 해요 */
+  sp.forEach((s,i)=>sp.forEach((u,k)=>{if(k>i&&Math.abs(s.y-u.y)<1e-4)u.y=s.y}));
+  const ys=[];for(let i=0;i<=400;i++)ys.push(g(DOM[0]+(DOM[1]-DOM[0])*i/400));
+  const lo=Math.min(...ys),hi=Math.max(...ys);
+  /* 평면에 보여 줄 높이 범위: 극점·평평한 점 주변을 넉넉히. 그래프 양 끝은 이 범위를 위아래로 빠져나가요 */
+  const mid=[];for(let i=0;i<=200;i++)mid.push(g(-2+4*i/200));
+  const midR=Math.max(...mid)-Math.min(...mid);
+  let wLo,wHi;
+  if(sp.length){const a=Math.min(...sp.map(s=>s.y)),b2=Math.max(...sp.map(s=>s.y)),S=Math.max(b2-a,0.35*midR,1.2);wLo=a-0.6*S;wHi=b2+0.6*S}
+  else{const S=0.35*midR;wLo=-S;wHi=S}
+  if(b.view){wLo=b.view.y[0];wHi=b.view.y[1]}
+  const pad=0.07*(wHi-wLo);
+  return {id,sign,g,sp,lo,hi,wLo,wHi,aBot:wLo+pad,aTop:wHi-pad,d:b.d,name:b.name,vx:b.view?b.view.x:DOM,view:!!b.view};
+}
+/* x축 높이 y에서 그래프와 만나는 모양: 1=뚫고 지나감, 2=접함, 3=평평하게 지나감 */
+function signature(S,y){
+  const eps=1e-7,touched=S.sp.filter(s=>Math.abs(s.y-y)<eps);
+  const out=touched.map(s=>({x:s.x,c:s.kind==='ext'?2:3}));
+  const N=2600;let prev=null,px=null;
+  for(let i=0;i<=N;i++){const x=DOM[0]+(DOM[1]-DOM[0])*i/N;if(touched.some(s=>Math.abs(s.x-x)<0.06)){prev=null;continue}
+    const v=S.g(x)-y;const sgn=v>0?1:v<0?-1:0;if(sgn===0)continue;
+    if(prev!==null&&sgn!==prev)out.push({x:(x+px)/2,c:1});prev=sgn;px=x}
+  return out.sort((a,b)=>a.x-b.x);
+}
+const targetSig=t=>t.m.map(k=>k===4?2:k);
+function possibleShapes(t){
+  if(t.d===2)return ['P'];
+  if(t.irr)return ORDER[t.d].slice();
+  const k=t.m.join('');
+  if(t.d===3)return k==='3'?['C1']:['C2'];
+  return k==='31'?['FL']:k==='13'?['FR']:k==='4'?['U']:['W'];
+}
+/* 이 판의 보기 목록과 정답 목록 */
+function optionList(t,mode){const signs=mode==='mixed'?[1,-1]:[1];const o=[];signs.forEach(s=>ORDER[t.d].forEach(id=>o.push({id,sign:s})));return o}
+function correctList(t,mode){const signs=mode==='mixed'?[1,-1]:[1];const o=[];signs.forEach(s=>possibleShapes(t).forEach(id=>o.push({id,sign:s})));return o}
+const sameSig=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i].c);
+function judge(t,S,y){return possibleShapes(t).includes(S.id)&&sameSig(targetSig(t),signature(S,y))}
+/* 정답 보기용: 조건을 만족하는 x축 높이 하나 찾기 */
+/* 이 개형에서 정답이 되는 x축 높이 구간들. 점 하나(극점 높이)일 수도, 구간일 수도 있어요 */
+function zonesOf(t,S){if(!possibleShapes(t).includes(S.id))return [];
+  const ys=S.sp.map(s=>s.y);const N=600;for(let i=0;i<=N;i++)ys.push(S.aBot+(S.aTop-S.aBot)*i/N);
+  const pts=[...new Set(ys)].filter(y=>y>=S.aBot-1e-9&&y<=S.aTop+1e-9).sort((a,b)=>a-b).map(y=>({y,ok:judge(t,S,y)}));
+  const zs=[];let cur=null;
+  pts.forEach(p=>{if(p.ok){if(!cur)cur=[];cur.push(p.y)}else if(cur){zs.push(cur);cur=null}});if(cur)zs.push(cur);
+  return zs.map(z=>({lo:z[0],hi:z[z.length-1],mid:z.length===1?z[0]:z[Math.floor(z.length/2)]}))}
+function zoneIndex(zs,y){let k=-1,dm=Infinity;zs.forEach((z,i)=>{const d=y<z.lo?z.lo-y:y>z.hi?y-z.hi:0;if(d<dm){dm=d;k=i}});return k}
+function solveAxis(t,S){const z=zonesOf(t,S);return z.length?z[0].mid:null}
+function drawSet(){return TYPES.slice()}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+/* ===================== END ENGINE ===================== */
+
+const NS='http://www.w3.org/2000/svg';
+const $=id=>document.getElementById(id);
+const GREEK=['α','β','γ','δ'];
+const SUP={1:'',2:'²',3:'³',4:'⁴'};
+const LAB='①②③④⑤⑥⑦⑧';
+let MODE='positive', SERVER=false;
+
+function formulaHTML(t){
+  const parts=t.m.map((k,i)=>`(<i>x</i> − <i>${GREEK[i]}</i>)${SUP[k]}`);
+  const irr=[['p','q'],['r','s']];for(let i=0;i<(t.irr||0);i++)parts.push(`(<i>x</i>² + <i>${irr[i][0]}x</i> + <i>${irr[i][1]}</i>)`);
+  const lead=MODE==='mixed'?'<i>a</i>':'';
+  const body=(!lead&&parts.length===1&&t.irr&&!t.m.length)?parts[0].slice(1,-1):parts.join('');
+  return `<i>f</i>(<i>x</i>) = ${lead}${body}`;
+}
+function condHTML(t){if(t.m.length<2)return '';return t.m.map((_,i)=>`<i>${GREEK[i]}</i>`).join(' &lt; ')}
+
+function el(tag,attrs={},parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e}
+function pathOf(S,X,Y){const A=S.vx[0]-0.3,B=S.vx[1]+0.3;let d='';for(let i=0;i<=260;i++){const x=A+(B-A)*i/260;let y=Y(S.g(x));y=Math.max(-40,Math.min(400,y));d+=(i?'L':'M')+X(x).toFixed(1)+' '+y.toFixed(1)}return d}
+function cardSVG(S){const W=170,H=104,pad=0.06*(S.hi-S.lo);
+  const lo=S.view?S.wLo:S.lo-pad,hi=S.view?S.wHi:S.hi+pad,[a,b]=S.vx;
+  const X=x=>6+(x-a)/(b-a)*(W-12),Y=y=>H-6-(y-lo)/(hi-lo)*(H-12);
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,'aria-hidden':'true'});const id='cc'+Math.random().toString(36).slice(2,8);
+  el('rect',{width:W,height:H},el('clipPath',{id},el('defs',{},svg)));
+  el('path',{d:pathOf(S,X,Y),fill:'none',stroke:'var(--ink)','stroke-width':2.3,'stroke-linecap':'round','clip-path':`url(#${id})`},svg);return svg}
+
+/* ---------- 문제 화면 ---------- */
+let G=null, Q=null, clockT=0;
+function newGame(name){G={name,i:0,first:[],items:drawSet(),t0:Date.now()}}
+function renderDots(){const d=$('dots');d.innerHTML='';G.items.forEach((_,i)=>{const e=document.createElement('i');if(G.first[i]===true)e.className='ok';else if(G.first[i]===false)e.className='bad';if(i===G.i)e.classList.add('now');d.appendChild(e)})}
+function fmt(ms){const s=Math.round(ms/1000);return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`}
+function startClock(){clearInterval(clockT);clockT=setInterval(()=>{$('clock').textContent=fmt(Date.now()-G.t0)},500)}
+
+function renderQ(){
+  const t=G.items[G.i];
+  Q={t,opts:optionList(t,MODE).map(o=>({...o,S:makeShape(o.id,o.sign,t)})),sel:new Set(),axis:{},moved:{},planes:{},submitted:false,done:false};
+  $('qn').innerHTML=`${G.i+1} <small>/ ${G.items.length}</small>`;renderDots();
+  $('fx').innerHTML=formulaHTML(t);const c=condHTML(t);$('cond').innerHTML=c;$('cond').hidden=!c;
+  const cards=$('cards');cards.innerHTML='';cards.style.setProperty('--cols',{1:2,2:2,3:3,4:4,6:3,8:4}[Q.opts.length]||4);
+  Q.opts.forEach((o,j)=>{const b=document.createElement('button');b.type='button';b.className='card';b.id=`card-${j}`;b.setAttribute('aria-pressed','false');
+    b.setAttribute('aria-label',`개형 ${j+1}`);b.innerHTML=`<span class="lab">${LAB[j]}</span><span class="ck"></span>`;b.appendChild(cardSVG(o.S));
+    b.addEventListener('click',()=>toggle(j));cards.appendChild(b)});
+  $('planes').innerHTML='';renderPlanes();
+  $('fb').innerHTML='';$('subErr').textContent='';$('submitBtn').hidden=false;$('revealBtn').hidden=true;$('nextBtn').hidden=true;
+}
+function nAxes(j){const o=Q.opts[j];if(!correctList(Q.t,MODE).some(c=>c.id===o.id&&c.sign===o.sign))return 1;return Math.max(1,zonesOf(Q.t,o.S).length)}
+function toggle(j){if(Q.done)return;const b=$('card-'+j);
+  if(Q.sel.has(j))Q.sel.delete(j);else{Q.sel.add(j);if(!(j in Q.axis)){const S=Q.opts[j].S,n=nAxes(j),sp=S.aTop-S.aBot;
+    Q.axis[j]=n===1?[(S.aBot+S.aTop)/2+0.07*sp]:Array.from({length:n},(_,k)=>S.aBot+sp*(k+1)/(n+1)+0.04*sp);Q.moved[j]=Q.axis[j].map(()=>false)}}
+  b.classList.toggle('sel',Q.sel.has(j));b.querySelector('.ck').textContent=Q.sel.has(j)?'✓':'';b.setAttribute('aria-pressed',String(Q.sel.has(j)));
+  $('subErr').textContent='';clearMarks();renderPlanes()}
+function clearMarks(){Object.values(Q.planes).forEach(p=>{p.wrap.classList.remove('ok','bad');p.why.hidden=true;p.labs.innerHTML=''})}
+function renderPlanes(){
+  const box=$('planes');
+  Object.keys(Q.planes).forEach(j=>{if(!Q.sel.has(+j)){Q.planes[j].wrap.remove();delete Q.planes[j]}});
+  box.querySelector('.empty')?.remove();
+  if(!Q.sel.size){box.innerHTML='<div class="empty">위에서 개형을 고르면 여기에 하나씩 나타나요.</div>';return}
+  [...Q.sel].sort((a,b)=>a-b).forEach(j=>{if(!Q.planes[j])Q.planes[j]=makePlane(j)});
+  [...Q.sel].sort((a,b)=>a-b).forEach(j=>box.appendChild(Q.planes[j].wrap));
+}
+function makePlane(j,opts={}){
+  const S=Q.opts[j].S,W=340,H=220,lo=S.wLo,hi=S.wHi,n=Q.axis[j].length;
+  const G0=52;/* 왼쪽 손잡이 자리는 그래프와 겹치지 않게 비워 둬요 */
+  const [va,vb]=S.vx,X=x=>G0+(x-va)/(vb-va)*(W-G0-6),Y=y=>H-(y-lo)/(hi-lo)*H,Yinv=py=>lo+(H-py)/H*(hi-lo);
+  const wrap=document.createElement('div');wrap.className='pl';
+  wrap.innerHTML=`<div class="lab">${LAB[j]}<small class="note">${n>1?`x축 위치가 ${n}가지예요. 서로 다른 위치에 놓아 주세요.`:''}</small></div>`;
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,tabindex:'0',role:'group','aria-label':`${LAB[j]} 개형의 x축 ${n}개. 위아래 화살표로 움직이고${n>1?', 숫자 키로 x축을 바꿔요':''}.`});
+  const cid='cl'+Math.random().toString(36).slice(2,8);
+  const cp=el('clipPath',{id:cid},el('defs',{},svg));el('rect',{width:W,height:H},cp);
+  el('rect',{width:W,height:H,fill:'transparent'},svg);
+  el('line',{x1:G0-4,y1:0,x2:G0-4,y2:H,stroke:'var(--line)','stroke-dasharray':'3 4'},svg);
+  el('path',{d:pathOf(S,X,Y),fill:'none',stroke:'var(--ink)','stroke-width':2.6,'stroke-linecap':'round','clip-path':`url(#${cid})`},svg);
+  const dots=S.sp.map(s=>el('circle',{cx:X(s.x),cy:Y(s.y),r:5.5,fill:'var(--axis)',opacity:0},svg));
+  const labs=el('g',{},svg);
+  const why=document.createElement('p');why.className='why';why.hidden=true;
+  const snapK=y=>{const thr=0.045*(hi-lo);let k=-1,dm=Infinity;S.sp.forEach((s,i)=>{const d=Math.abs(s.y-y);if(d<thr&&d<dm){dm=d;k=i}});return k};
+  const axes=Q.axis[j].map((y0,k)=>{const g=el('g',{},svg);
+    el('line',{x1:0,y1:0,x2:W,y2:0,stroke:'var(--axis)','stroke-width':2.2,'stroke-dasharray':k===1?'9 5':k===2?'2 4':'none'},g);
+    el('path',{d:`M${W-14} -5L${W-3} 0L${W-14} 5`,fill:'none',stroke:'var(--axis)','stroke-width':2.2},g);
+    const xl=el('text',{x:W-16,y:-9,fill:'var(--axis)','font-style':'italic','font-size':15},g);xl.textContent='x';
+    const hb=el('rect',{x:4,y:-13,width:40,height:26,rx:13,fill:'var(--axis-soft)',stroke:'var(--axis)'},g);
+    const ar=el('text',{x:24,y:5,'text-anchor':'middle','font-size':14,'font-weight':n>1?600:400,fill:'var(--axis)'},g);ar.textContent=n>1?`${k+1} ↕`:'↕';
+    return {g,hb,target:y0,shown:y0,raf:0}});
+  let active=0,drag=false,off=0;
+  const paintDots=()=>{const on=new Set();axes.forEach(a=>S.sp.forEach((s,k)=>{if(Math.abs(s.y-a.shown)<1e-9)on.add(k)}));dots.forEach((d,i)=>d.setAttribute('opacity',on.has(i)?'1':'0'))};
+  const paint=a=>{a.g.setAttribute('transform',`translate(0 ${Y(a.shown).toFixed(2)})`);paintDots()};
+  const showActive=()=>axes.forEach((a,k)=>a.hb.setAttribute('stroke-width',n>1&&k===active&&!opts.locked?2.5:1));
+  const tick=a=>()=>{a.shown+=(a.target-a.shown)*0.4;if(Math.abs(a.target-a.shown)<(hi-lo)*0.0005)a.shown=a.target;paint(a);a.raf=a.shown!==a.target?requestAnimationFrame(tick(a)):0};
+  const go=(k,y)=>{const a=axes[k];y=Math.max(S.aBot,Math.min(S.aTop,y));const s=snapK(y);if(s>=0)y=S.sp[s].y;a.target=y;Q.axis[j][k]=y;Q.moved[j][k]=true;
+    if(!opts.locked){wrap.classList.remove('ok','bad');why.hidden=true;labs.innerHTML='';$('subErr').textContent=''}if(!a.raf)a.raf=requestAnimationFrame(tick(a))};
+  const py=e=>{const r=svg.getBoundingClientRect();return (e.clientY-r.top)/r.height*H};
+  if(!opts.locked){
+    svg.addEventListener('pointerdown',e=>{if(Q.done)return;const p=py(e);let best=0,dm=Infinity;axes.forEach((a,k)=>{const d=Math.abs(p-Y(a.target));if(d<dm){dm=d;best=k}});
+      active=best;showActive();drag=true;svg.setPointerCapture(e.pointerId);off=dm<22?p-Y(axes[best].target):0;go(best,Yinv(p-off));e.preventDefault()});
+    svg.addEventListener('pointermove',e=>{if(drag)go(active,Yinv(py(e)-off))});
+    const end=()=>{drag=false};svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',end);svg.addEventListener('lostpointercapture',end);
+    svg.addEventListener('keydown',e=>{if(Q.done)return;const st=(hi-lo)*0.02;
+      if(e.key==='ArrowUp'){e.preventDefault();go(active,axes[active].target+st)}else if(e.key==='ArrowDown'){e.preventDefault();go(active,axes[active].target-st)}
+      else if(/^[1-9]$/.test(e.key)&&+e.key<=n){active=+e.key-1;showActive()}});
+  }else wrap.classList.add('locked');
+  wrap.appendChild(svg);wrap.appendChild(why);
+  const P={wrap,svg,labs,why,S,X,Y,j};
+  P.set=ys=>{ys.forEach((y,k)=>{axes[k].target=axes[k].shown=y;paint(axes[k])})};
+  axes.forEach(paint);showActive();return P;
+}
+function rootLabels(P,ys){P.labs.innerHTML='';const names=Q.t.m.map((_,i)=>GREEK[i]);
+  ys.forEach(y=>signature(P.S,y).forEach((r,i)=>{el('circle',{cx:P.X(r.x),cy:P.Y(y),r:4.5,fill:'var(--ok)'},P.labs);
+    const tx=el('text',{x:P.X(r.x),y:P.Y(y)+(P.S.g(r.x+0.25)>y&&P.S.g(r.x-0.25)>y?-9:21),'text-anchor':'middle','font-size':16,'font-style':'italic',fill:'var(--ok)'},P.labs);tx.textContent=names[i]||''}))}
+
+/* ---------- 판정과 해설 ---------- */
+function describeTarget(t){const out=[];t.m.forEach((k,i)=>{const n=`<span class="m">${GREEK[i]}</span>`;
+  out.push(k===1?`${n}에서 뚫고 지나가기`:k===2||k===4?`${n}에서 접하기`:`${n}에서 평평하게 지나가기`)});
+  return out.length?out.join(', '):'x축과 만나지 않기'}
+function planeWhy(t,o,S,y){
+  if(!possibleShapes(t).includes(o.id)){
+    if(t.irr)return '';
+    if(t.d===3)return o.id==='C1'?'평평한 점은 삼중근 (x − α)³일 때만 생겨요.':'서로 다른 실근이 있으면 극댓값과 극솟값이 모두 있는 개형이에요.';
+    if(t.d===4){const k=t.m.join('');
+      if(k==='4')return '(x − α)⁴은 극소가 하나뿐이고 평평한 점이 없는 U자 개형이에요.';
+      if(k==='31')return '삼중근 (x − α)³이 왼쪽 근이라, 왼쪽에 평평한 점이 있는 개형이에요.';
+      if(k==='13')return '삼중근 (x − β)³이 오른쪽 근이라, 오른쪽에 평평한 점이 있는 개형이에요.';
+      return '실근이 여러 개이고 삼중근이 없으면, 극값이 세 개인 개형이에요.'}
+    return '이 식으로는 나올 수 없는 개형이에요.'}
+  const now=signature(S,y),tg=targetSig(t);
+  const cnt=now.length,need=tg.length;
+  let s=`필요한 모양: ${describeTarget(t)}.`;
+  if(cnt!==need)s=`지금 x축과 ${cnt}개 점에서 만나요. `+s;
+  return s;
+}
+function submit(){
+  if(Q.done)return;const err=$('subErr');
+  if(!Q.sel.size){err.textContent='개형을 하나 이상 골라 주세요.';return}
+  err.textContent='';
+  const t=Q.t,correct=correctList(t,MODE),isCorrect=o=>correct.some(c=>c.id===o.id&&c.sign===o.sign);
+  let allOk=true,wrongShape=0;
+  [...Q.sel].forEach(j=>{const o=Q.opts[j],P=Q.planes[j],ys=Q.axis[j],n=ys.length;let w='';
+    if(!isCorrect(o)){wrongShape++;w=planeWhy(t,o,o.S,ys[0])||'이 식으로는 나올 수 없는 개형이에요.'}
+    else{const bad=ys.findIndex(y=>!judge(t,o.S,y));
+      if(bad>=0)w=(n>1?`x축 ${bad+1}: `:'')+planeWhy(t,o,o.S,ys[bad]);
+      else if(n>1){const zs=zonesOf(t,o.S),idx=ys.map(y=>zoneIndex(zs,y));if(new Set(idx).size<n)w='두 x축이 같은 종류의 위치에 있어요. 다른 종류의 위치를 찾아 보세요.'}}
+    const ok=!w;P.wrap.classList.toggle('ok',ok);P.wrap.classList.toggle('bad',!ok);
+    if(ok){P.why.hidden=true;rootLabels(P,ys)}else{allOk=false;P.why.innerHTML=w;P.why.hidden=false;P.labs.innerHTML=''}});
+  const missing=correct.filter(c=>!Q.opts.some((o,j)=>Q.sel.has(j)&&o.id===c.id&&o.sign===c.sign)).length;
+  const first=!Q.submitted;Q.submitted=true;
+  if(allOk&&!missing){finishQ(true,first);return}
+  if(first){G.first[G.i]=false;renderDots()}
+  const msgs=[];if(wrongShape)msgs.push(`될 수 없는 개형을 ${wrongShape}개 골랐어요.`);if(missing)msgs.push(`될 수 있는 개형이 ${missing}개 더 있어요.`);
+  if(!wrongShape&&!missing)msgs.push('고른 개형은 모두 맞아요. 빨간 테두리의 x축 위치를 고쳐 보세요.');
+  $('fb').innerHTML=`<div class="fb bad"><h3>다시 해 볼까요</h3><p>${msgs.join(' ')}</p></div>`;
+  $('revealBtn').hidden=false;
+}
+function explainHTML(t){const li=[];
+  t.m.forEach((k,i)=>{const f=`(<i>x</i> − <i>${GREEK[i]}</i>)${SUP[k]}`;
+    li.push(k===1?`${f} → <span class="m">x = ${GREEK[i]}</span>에서 x축을 뚫고 지나가요.`:k===2?`${f} → 중근이라 <span class="m">x = ${GREEK[i]}</span>에서 x축에 접해요.`:k===3?`${f} → 삼중근이라 <span class="m">x = ${GREEK[i]}</span>에서 평평해지면서 x축을 지나가요.`:`${f} → 사중근이라 <span class="m">x = ${GREEK[i]}</span>에서 x축에 접해요.`)});
+  if(t.irr)li.push(`허근을 갖는 이차식 인수는 항상 양수라 x축과 만나지 않아요. 극값이 몇 개인지는 식만으로 정할 수 없어서, 이 차수의 개형이 모두 가능해요.`);
+  if(correctList(t,MODE).some(c=>zonesOf(t,makeShape(c.id,c.sign,t)).length>1))li.push(`개형에 따라 x축을 놓을 수 있는 위치가 두 종류예요. 극값이나 평평한 점을 사이에 두고 위쪽과 아래쪽이 각각 조건을 만족하기 때문이에요.`);
+  if(MODE==='mixed')li.push(`<span class="m">a</span>의 부호를 모르므로 위아래가 뒤집힌 개형도 가능해요.`);
+  return '<ul>'+li.map(s=>`<li>${s}</li>`).join('')+'</ul>'}
+function finishQ(ok,first){
+  Q.done=true;if(first)G.first[G.i]=true;renderDots();
+  document.querySelectorAll('#cards .card').forEach(b=>b.disabled=true);
+  $('fb').innerHTML=`<div class="fb ok"><h3>${ok?'정답이에요':'정답을 확인해요'}</h3>${explainHTML(Q.t)}</div>`;
+  $('submitBtn').hidden=true;$('revealBtn').hidden=true;$('nextBtn').hidden=false;$('nextBtn').textContent=G.i+1<G.items.length?'다음 문제':'결과 보기';$('nextBtn').focus();
+}
+function reveal(){
+  const t=Q.t,correct=correctList(t,MODE);
+  Q.sel.clear();Object.values(Q.planes).forEach(p=>p.wrap.remove());Q.planes={};$('planes').innerHTML='';
+  Q.opts.forEach((o,j)=>{const b=$('card-'+j),on=correct.some(c=>c.id===o.id&&c.sign===o.sign);b.classList.toggle('sel',on);b.querySelector('.ck').textContent=on?'✓':'';
+    if(on){Q.sel.add(j);const ys=zonesOf(t,o.S).map(z=>z.mid);Q.axis[j]=ys;Q.moved[j]=ys.map(()=>true);const P=makePlane(j,{locked:true});Q.planes[j]=P;P.set(ys);P.wrap.classList.add('reveal');rootLabels(P,ys);$('planes').appendChild(P.wrap)}});
+  finishQ(false,false);
+}
+
+/* ---------- 서버 ---------- */
+async function loadConfig(){try{const r=await fetch('/api/config',{cache:'no-store'});if(!r.ok)throw 0;const d=await r.json();MODE=d.mode==='mixed'?'mixed':'positive';SERVER=true}catch(e){SERVER=false}
+  $('previewMode').hidden=SERVER}
+async function saveRecord(){if(!SERVER)return 'preview';
+  try{const r=await fetch('/api/record',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:G.name,correct:G.first.filter(x=>x===true).length,total:G.items.length,ms:Date.now()-G.t0,mode:MODE})});return r.ok?'ok':'fail'}catch(e){return 'fail'}}
+
+/* ---------- 흐름 ---------- */
+function show(id){['intro','play','result'].forEach(s=>$(s).hidden=s!==id);window.scrollTo({top:0})}
+async function finishGame(){clearInterval(clockT);show('result');
+  const n=G.first.filter(x=>x===true).length;$('resName').textContent=G.name;$('resScore').textContent=`${n} / ${G.items.length}`;
+  $('resTime').textContent=fmt(Date.now()-G.t0);const miss=G.first.map((v,i)=>v?null:i+1).filter(Boolean);$('resMiss').textContent=miss.length?miss.join(', ')+'번':'없음';
+  $('saveMsg').textContent='기록을 저장하는 중…';const s=await saveRecord();
+  $('saveMsg').textContent=s==='ok'?'기록을 선생님께 보냈어요.':s==='preview'?'미리보기에서는 기록이 저장되지 않아요.':'기록을 저장하지 못했어요. 인터넷 연결을 확인해 주세요.'}
+function begin(name){newGame(name);show('play');renderQ();$('clock').textContent='0:00';startClock()}
+try{const s=localStorage.getItem('sp-nick');if(s)$('nick').value=s}catch(e){}
+$('nick').addEventListener('input',()=>{$('nickErr').textContent=''});
+$('startForm').addEventListener('submit',async e=>{e.preventDefault();const v=$('nick').value.trim();
+  if(!v){$('nickErr').textContent='이름을 입력해야 기록이 남아요.';$('nick').focus();return}
+  try{localStorage.setItem('sp-nick',v)}catch(e){}
+  const b=$('startBtn');b.disabled=true;b.textContent='준비 중…';if(SERVER)await loadConfig();b.disabled=false;b.textContent='시작하기';begin(v)});
+$('submitBtn').addEventListener('click',submit);
+$('revealBtn').addEventListener('click',reveal);
+$('nextBtn').addEventListener('click',()=>{G.i++;if(G.i>=G.items.length)finishGame();else{renderQ();window.scrollTo({top:0})}});
+$('againBtn').addEventListener('click',()=>begin(G.name));
+$('homeBtn').addEventListener('click',()=>{clearInterval(clockT);show('intro')});
+const setPM=m=>{MODE=m;$('pmPos').setAttribute('aria-pressed',String(m==='positive'));$('pmMix').setAttribute('aria-pressed',String(m==='mixed'))};
+$('pmPos').addEventListener('click',()=>setPM('positive'));$('pmMix').addEventListener('click',()=>setPM('mixed'));
+loadConfig();
+</script>
